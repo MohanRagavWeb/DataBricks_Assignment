@@ -1,38 +1,24 @@
-# Databricks Medallion Architecture & API Ingestion Project
+# Databricks Data Engineering Project
 
-## 📌 Overview
+## 1. Introduction
 
-This project demonstrates end-to-end data engineering workflows using **Databricks (Unity Catalog + Volumes)**.
-It includes:
+This project demonstrates end-to-end data processing using Databricks with Unity Catalog volumes. It covers two main use cases:
 
-1. **Medallion Architecture (Bronze → Silver → Gold) using CSV files**
-2. **API Data Ingestion → Transformation → Delta Table**
+1. Implementation of Medallion Architecture (Bronze, Silver, Gold) using CSV datasets
+2. API data ingestion, transformation, and storage using Delta Lake
 
-All implementations follow **best practices** such as schema enforcement, reusable utilities, and Delta Lake usage.
-
----
-
-# 🧩 Assignment 1: Medallion Architecture (CSV Processing)
-
-## 📂 Project Structure
-
-```
-Workspace/
-│
-├── source_to_bronze/
-│     ├── utils
-│     └── employee_source_to_bronze
-│
-├── bronze_to_silver/
-│     └── employee_bronze_to_silver
-│
-├── silver_to_gold/
-      └── employee_silver_to_gold
-```
+The project follows standard data engineering practices such as schema enforcement, modular design, and layered data processing.
 
 ---
 
-## 📁 Volume Path Used
+## 2. Environment Details
+
+* Platform: Databricks (Unity Catalog enabled)
+* Storage: Volumes
+* Processing Engine: Apache Spark
+* Data Format: CSV (input), Delta (output)
+
+Base storage path used:
 
 ```
 /Volumes/assignment/default/employee_vol/
@@ -40,13 +26,35 @@ Workspace/
 
 ---
 
-## 📥 Input Datasets
+## 3. Assignment 1: Medallion Architecture
+
+### 3.1 Folder Structure
+
+The notebooks are organized into three layers:
+
+```
+source_to_bronze/
+    utils
+    employee_source_to_bronze
+
+bronze_to_silver/
+    employee_bronze_to_silver
+
+silver_to_gold/
+    employee_silver_to_gold
+```
+
+---
+
+### 3.2 Input Data
+
+The following datasets are used:
 
 * employee.csv
 * department.csv
 * country.csv
 
-Stored at:
+Location:
 
 ```
 /Volumes/assignment/default/employee_vol/input/
@@ -54,14 +62,16 @@ Stored at:
 
 ---
 
-## 🥉 Bronze Layer
+### 3.3 Bronze Layer
 
-### Actions Performed:
+In this layer, raw data is ingested without transformation.
 
-* Read CSV files as DataFrames
-* Store raw data in volume
+Steps performed:
 
-### Output:
+* Read CSV files into DataFrames
+* Store data in raw format
+
+Output location:
 
 ```
 /source_to_bronze/employee
@@ -71,25 +81,23 @@ Stored at:
 
 ---
 
-## 🥈 Silver Layer
+### 3.4 Silver Layer
 
-### Transformations:
+This layer focuses on data cleaning and standardization.
 
-* Read data with **custom schema**
-* Convert column names:
+Steps performed:
 
-  * CamelCase → snake_case
-* Add column:
+* Read data using a predefined schema
+* Convert column names from CamelCase to snake_case
+* Add a load_date column
+* Store data as Delta table
 
-  * `load_date`
-* Store as Delta Table
+Database and table:
 
-### Table Details:
+* Database: employee_info
+* Table: dim_employee
 
-* Database: `employee_info`
-* Table: `dim_employee`
-
-### Output Path:
+Storage location:
 
 ```
 /silver/employee_info/dim_employee
@@ -97,46 +105,58 @@ Stored at:
 
 ---
 
-## 🥇 Gold Layer
+### 3.5 Gold Layer
 
-### Business Transformations:
+This layer contains business-level transformations.
 
-1. Total salary per department (descending)
-2. Employee count per department per country
-3. Department name with country name
-4. Average age per department
+Transformations:
 
-### Additional Column:
+1. Total salary per department in descending order
+2. Employee count per department and country
+3. Department names with corresponding country names
+4. Average age of employees per department
 
-* `at_load_date`
+Additional processing:
 
-### Output Tables:
+* Add at_load_date column
+
+Output location:
 
 ```
-/gold/employee/fact_employee_salary
-/gold/employee/fact_employee_count
-/gold/employee/fact_employee_dept_country
-/gold/employee/fact_employee_avg_age
+/gold/employee/
 ```
+
+Tables created:
+
+* fact_employee_salary
+* fact_employee_count
+* fact_employee_dept_country
+* fact_employee_avg_age
 
 ---
 
-## 🔧 Utilities Used
+### 3.6 Utility Functions
 
-* Column conversion (camel → snake)
-* Load date addition
+A common utility notebook is used to avoid code duplication.
+
+Functions include:
+
+* Column name conversion (CamelCase to snake_case)
+* Adding load_date column
 
 ---
 
-# 🌐 Assignment 2: API Data Ingestion
+## 4. Assignment 2: API Data Ingestion
 
-## 📡 API Used
+### 4.1 API Details
+
+API endpoint:
 
 ```
 https://reqres.in/api/users?page=2
 ```
 
-Header:
+Header used:
 
 ```
 x-api-key: reqres_f84e4451a9e645e78c89a38b40af1425
@@ -144,16 +164,18 @@ x-api-key: reqres_f84e4451a9e645e78c89a38b40af1425
 
 ---
 
-## ⚙️ Processing Steps
+### 4.2 Data Extraction
 
-### 1. API Extraction
+* Data is fetched dynamically using pagination
+* The process continues until no more records are returned
 
-* Loop through pages dynamically
-* Stop when API returns empty data
+---
 
-### 2. Data Cleaning
+### 4.3 Data Cleaning and Transformation
 
-* Dropped fields:
+Steps performed:
+
+* Removed unnecessary fields:
 
   * page
   * per_page
@@ -161,116 +183,77 @@ x-api-key: reqres_f84e4451a9e645e78c89a38b40af1425
   * total_pages
   * support
 
-### 3. Schema Enforcement
+* Extracted the nested data array
 
-* Applied custom schema to DataFrame
+* Applied a custom schema
 
-### 4. Flattening
+* Derived a new column:
 
-* Extracted nested `data` block
+  * site_address (from email domain)
 
-### 5. Derived Columns
-
-* `site_address` from email (e.g., reqres.in)
-* `load_date` (current date)
+* Added load_date column
 
 ---
 
-## 💾 Output
+### 4.4 Output Storage
 
-### Database:
+Database:
 
 ```
 site_info
 ```
 
-### Table:
+Table:
 
 ```
 person_info
 ```
 
-### Storage Path:
+Storage path:
 
 ```
 /Volumes/assignment/default/employee_vol/site_info/person_info
 ```
 
-### Format:
+Format:
 
 * Delta
-* Mode: Overwrite
+
+Write mode:
+
+* Overwrite
 
 ---
 
-# 🏗️ Architecture Summary
+## 5. Architecture Overview
 
 ```
-        ┌──────────────┐
-        │   Raw Data   │
-        └──────┬───────┘
-               │
-        ┌──────▼───────┐
-        │   Bronze     │  (Raw CSV)
-        └──────┬───────┘
-               │
-        ┌──────▼───────┐
-        │   Silver     │  (Cleaned + Delta)
-        └──────┬───────┘
-               │
-        ┌──────▼───────┐
-        │    Gold      │  (Business Aggregates)
-        └──────────────┘
+Raw Data → Bronze → Silver → Gold
 ```
 
----
-
-# 🚀 Key Features
-
-* ✅ Unity Catalog Volume usage
-* ✅ Schema enforcement
-* ✅ Reusable utility functions
-* ✅ Delta Lake storage
-* ✅ API pagination handling
-* ✅ Data standardization (snake_case)
-* ✅ Layered architecture (Medallion)
+* Bronze: Raw ingestion
+* Silver: Cleaned and structured data
+* Gold: Aggregated and business-ready data
 
 ---
 
-# 🔥 Interview Highlights
+## 6. Key Design Considerations
 
-* Why Medallion Architecture?
-  → Improves data quality and maintainability
-
-* Why Delta?
-  → ACID transactions, versioning, performance
-
-* Why custom schema?
-  → Avoids inference issues, ensures consistency
-
-* Why loop API?
-  → Handles dynamic pagination
-
-* Why snake_case?
-  → Industry standard naming convention
+* Use of Unity Catalog volumes for governed storage
+* Schema enforcement for data consistency
+* Modular notebook design for reusability
+* Delta Lake for reliable storage and performance
+* Separation of concerns using Medallion Architecture
 
 ---
 
-# 📌 Conclusion
+## 7. Conclusion
 
-This project demonstrates:
-
-* End-to-end ETL pipeline design
-* Real-time API ingestion
-* Data transformation and optimization
-* Production-ready data engineering practices
+This project demonstrates a structured approach to building scalable data pipelines in Databricks. It covers both batch data processing and API-based ingestion while maintaining clean architecture and best practices.
 
 ---
 
-# 👨‍💻 Author
+## 8. Author
 
-**Name:** Mohan
-**Course:** B.E. Computer Science Engineering
-**Focus:** Databricks | Data Engineering | Full Stack Development
-
----
+Mohan
+B.E. Computer Science Engineering
