@@ -253,7 +253,4 @@ This project demonstrates a structured approach to building scalable data pipeli
 
 ---
 
-## 8. Author
 
-Mohan
-B.E. Computer Science Engineering
